@@ -73,38 +73,78 @@ const FoodDetails: React.FC = () => {
 
   useEffect(() => {
     async function loadFood(): Promise<void> {
-      // Load a specific food with extras based on routeParams id
+      try {
+        const response = await api.get(`/foods/${routeParams.id}`);
+
+        const formatted = {
+          ...response.data,
+          formattedPrice: formatValue(response.data.price)
+        };
+
+        setFood(formatted);
+
+        const formattedExtras: Extra[] = response.data.extras.map(item => {
+          return {
+          ...item,
+          quantity: 0
+        }});
+
+        setExtras(formattedExtras);
+      } catch (err) {
+        console.log(err);
+      }
     }
 
     loadFood();
   }, [routeParams]);
 
   function handleIncrementExtra(id: number): void {
-    // Increment extra quantity
+    const withExtra = extras.map(item => item.id === id ? { ...item, quantity: item.quantity + 1 } : item)
+
+    setExtras(withExtra);
   }
 
   function handleDecrementExtra(id: number): void {
-    // Decrement extra quantity
+    const withoutExtra = extras.map(item => item.id === id ? { ...item, quantity: item.quantity - 1 } : item)
+
+    setExtras(withoutExtra);
   }
 
   function handleIncrementFood(): void {
-    // Increment food quantity
+    setFoodQuantity(foodQuantity + 1);
   }
 
   function handleDecrementFood(): void {
-    // Decrement food quantity
+    if (foodQuantity === 1) {
+      return;
+    }
+
+    setFoodQuantity(foodQuantity - 1);
   }
 
   const toggleFavorite = useCallback(() => {
-    // Toggle if food is favorite or not
+    setIsFavorite(!isFavorite);
   }, [isFavorite, food]);
 
   const cartTotal = useMemo(() => {
-    // Calculate cartTotal
+    if (extras.length >= 1) {
+      let totalExtra = extras.map(item => item.value * item.quantity);
+      let totalExtras = totalExtra.reduce((acc, value) => { return acc + value });
+      return formatValue(food.price * foodQuantity + totalExtras * foodQuantity);
+    }
+
+    return formatValue(food.price * foodQuantity);
   }, [extras, food, foodQuantity]);
 
   async function handleFinishOrder(): Promise<void> {
-    // Finish the order and save on the API
+    const response = await api.post('/orders', {
+      product_id: food.id,
+      name: food.name,
+      description: food.description,
+      price: food.price,
+      thumbnail_url: food.thumbnail_url,
+      extras: extras
+    })
   }
 
   // Calculate the correct icon name
